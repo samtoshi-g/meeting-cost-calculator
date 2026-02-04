@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meeting Cost Calculator 💸</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💸</text></svg>">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-dark: #0a0a0f;
+            --bg-card: #12121a;
+            --accent: #ff4757;
+            --accent-glow: rgba(255, 71, 87, 0.3);
+            --green: #2ed573;
+            --text: #ffffff;
+            --text-muted: #8b8b9a;
+            --border: #2a2a3a;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            padding: 30px 0 40px;
+        }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 1rem;
+        }
+
+        .cost-display {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 40px 30px;
+            text-align: center;
+            margin-bottom: 24px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cost-display.running {
+            border-color: var(--accent);
+            box-shadow: 0 0 40px var(--accent-glow);
+        }
+
+        .cost-display.running::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, var(--accent), transparent);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+
+        .cost-label {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 12px;
+        }
+
+        .cost-amount {
+            font-size: 4rem;
+            font-weight: 800;
+            font-variant-numeric: tabular-nums;
+            transition: color 0.3s;
+        }
+
+        .cost-display.running .cost-amount {
+            color: var(--accent);
+        }
+
+        .cost-cents {
+            font-size: 2rem;
+            opacity: 0.7;
+        }
+
+        .cost-per-second {
+            font-size: 1rem;
+            color: var(--text-muted);
+            margin-top: 12px;
+        }
+
+        .cost-per-second span {
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        .timer {
+            font-size: 1.5rem;
+            color: var(--text-muted);
+            margin-top: 20px;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 16px;
+        }
+
+        .card-title {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 16px;
+        }
+
+        .attendees-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .attendee-row {
+            display: grid;
+            grid-template-columns: 1fr 120px 40px;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .attendee-row input {
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 12px 14px;
+            color: var(--text);
+            font-size: 1rem;
+            width: 100%;
+            transition: border-color 0.2s;
+        }
+
+        .attendee-row input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .attendee-row input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .remove-btn {
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 12px;
+            font-size: 1.2rem;
+            transition: all 0.2s;
+        }
+
+        .remove-btn:hover {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: white;
+        }
+
+        .add-btn {
+            background: transparent;
+            border: 1px dashed var(--border);
+            border-radius: 10px;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 14px;
+            font-size: 0.95rem;
+            width: 100%;
+            transition: all 0.2s;
+            margin-top: 8px;
+        }
+
+        .add-btn:hover {
+            border-color: var(--text-muted);
+            color: var(--text);
+        }
+
+        .quick-add {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 16px;
+        }
+
+        .quick-add button {
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 8px 14px;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+
+        .quick-add button:hover {
+            border-color: var(--accent);
+            color: var(--text);
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        .btn {
+            padding: 16px 24px;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #ff6b7a;
+            transform: translateY(-1px);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--text-muted);
+        }
+
+        .btn-stop {
+            background: var(--green);
+            color: var(--bg-dark);
+        }
+
+        .btn-stop:hover {
+            background: #7bed9f;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        .stat {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 4px;
+        }
+
+        .share-section {
+            margin-top: 24px;
+            text-align: center;
+        }
+
+        .share-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            cursor: pointer;
+            padding: 14px 28px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .share-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+        }
+
+        .money-particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            overflow: hidden;
+            z-index: 1000;
+        }
+
+        .money-particle {
+            position: absolute;
+            font-size: 24px;
+            animation: fall 3s linear forwards;
+            opacity: 0;
+        }
+
+        @keyframes fall {
+            0% {
+                opacity: 1;
+                transform: translateY(-50px) rotate(0deg);
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(100vh) rotate(360deg);
+            }
+        }
+
+        footer {
+            text-align: center;
+            padding: 40px 0 20px;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        footer a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        @media (max-width: 500px) {
+            .cost-amount {
+                font-size: 3rem;
+            }
+
+            .cost-cents {
+                font-size: 1.5rem;
+            }
+
+            .attendee-row {
+                grid-template-columns: 1fr 90px 36px;
+                gap: 8px;
+            }
+
+            .attendee-row input {
+                padding: 10px 12px;
+                font-size: 0.9rem;
+            }
+
+            .stats {
+                grid-template-columns: 1fr;
+            }
+
+            .controls {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="money-particles" id="particles"></div>
+    
+    <div class="container">
+        <header>
+            <h1>💸 Meeting Cost Calculator</h1>
+            <p class="subtitle">See how much that meeting is really costing</p>
+        </header>
+
+        <div class="cost-display" id="costDisplay">
+            <div class="cost-label">Total Cost</div>
+            <div class="cost-amount">
+                $<span id="dollars">0</span><span class="cost-cents">.<span id="cents">00</span></span>
+            </div>
+            <div class="cost-per-second">
+                Burning <span id="perSecond">$0.00</span> per second
+            </div>
+            <div class="timer" id="timer">00:00:00</div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">👥 Attendees</div>
+            <div class="attendees-grid" id="attendeesGrid">
+                <!-- Attendees will be added here -->
+            </div>
+            <button class="add-btn" onclick="addAttendee()">+ Add Attendee</button>
+            
+            <div class="quick-add">
+                <button onclick="addPreset('Junior', 60000)">+Junior ($60k)</button>
+                <button onclick="addPreset('Mid', 100000)">+Mid ($100k)</button>
+                <button onclick="addPreset('Senior', 150000)">+Senior ($150k)</button>
+                <button onclick="addPreset('Director', 200000)">+Director ($200k)</button>
+                <button onclick="addPreset('VP', 300000)">+VP ($300k)</button>
+                <button onclick="addPreset('C-Suite', 500000)">+C-Suite ($500k)</button>
+            </div>
+        </div>
+
+        <div class="controls" id="controls">
+            <button class="btn btn-primary" id="startBtn" onclick="startMeeting()">
+                🔥 Start Meeting
+            </button>
+            <button class="btn btn-secondary" onclick="resetAll()">
+                Reset
+            </button>
+        </div>
+
+        <div class="controls hidden" id="runningControls">
+            <button class="btn btn-stop" onclick="stopMeeting()">
+                ✓ End Meeting
+            </button>
+            <button class="btn btn-secondary" onclick="pauseMeeting()">
+                ⏸ Pause
+            </button>
+        </div>
+
+        <div class="stats hidden" id="stats">
+            <div class="stat">
+                <div class="stat-value" id="hourlyRate">$0</div>
+                <div class="stat-label">Per Hour</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="dailyRate">$0</div>
+                <div class="stat-label">Daily (8hr)</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="weeklyRate">$0</div>
+                <div class="stat-label">Weekly</div>
+            </div>
+        </div>
+
+        <div class="share-section hidden" id="shareSection">
+            <button class="share-btn" onclick="shareResults()">
+                📤 Share Results
+            </button>
+        </div>
+
+        <footer>
+            <p>Built overnight by an AI that's tired of long meetings too 🤖</p>
+            <p style="margin-top: 8px;">Assumes 2,080 working hours/year</p>
+        </footer>
+    </div>
+
+    <script>
+        // State
+        let attendees = [];
+        let isRunning = false;
+        let isPaused = false;
+        let startTime = null;
+        let pausedTime = 0;
+        let totalCost = 0;
+        let intervalId = null;
+        let attendeeIdCounter = 0;
+
+        // Constants
+        const WORKING_HOURS_PER_YEAR = 2080;
+        const SECONDS_PER_HOUR = 3600;
+
+        // Initialize with some default attendees
+        function init() {
+            addAttendee('You', 100000);
+            addAttendee('Colleague', 100000);
+            updateStats();
+        }
+
+        function addAttendee(name = '', salary = '') {
+            const id = ++attendeeIdCounter;
+            attendees.push({ id, name, salary: salary || '' });
+            renderAttendees();
+            updateStats();
+        }
+
+        function addPreset(name, salary) {
+            addAttendee(name, salary);
+        }
+
+        function removeAttendee(id) {
+            if (attendees.length <= 1) return;
+            attendees = attendees.filter(a => a.id !== id);
+            renderAttendees();
+            updateStats();
+        }
+
+        function updateAttendee(id, field, value) {
+            const attendee = attendees.find(a => a.id === id);
+            if (attendee) {
+                if (field === 'salary') {
+                    // Parse salary, removing any non-numeric characters except dots
+                    const cleanValue = value.replace(/[^0-9.]/g, '');
+                    attendee.salary = cleanValue ? parseFloat(cleanValue) : '';
+                } else {
+                    attendee[field] = value;
+                }
+                updateStats();
+            }
+        }
+
+        function renderAttendees() {
+            const grid = document.getElementById('attendeesGrid');
+            grid.innerHTML = attendees.map(a => `
+                <div class="attendee-row">
+                    <input 
+                        type="text" 
+                        placeholder="Name" 
+                        value="${a.name}"
+                        onchange="updateAttendee(${a.id}, 'name', this.value)"
+                    >
+                    <input 
+                        type="text" 
+                        placeholder="$Salary" 
+                        value="${a.salary ? '$' + Number(a.salary).toLocaleString() : ''}"
+                        onchange="updateAttendee(${a.id}, 'salary', this.value)"
+                        onfocus="if(this.value) this.value = this.value.replace(/[^0-9]/g, '')"
+                        onblur="if(this.value) this.value = '$' + Number(this.value.replace(/[^0-9]/g, '')).toLocaleString()"
+                    >
+                    <button class="remove-btn" onclick="removeAttendee(${a.id})" ${attendees.length <= 1 ? 'disabled style="opacity:0.3"' : ''}>×</button>
+                </div>
+            `).join('');
+        }
+
+        function getCostPerSecond() {
+            let totalHourlyRate = 0;
+            attendees.forEach(a => {
+                if (a.salary && !isNaN(a.salary)) {
+                    totalHourlyRate += a.salary / WORKING_HOURS_PER_YEAR;
+                }
+            });
+            return totalHourlyRate / SECONDS_PER_HOUR;
+        }
+
+        function updateStats() {
+            const costPerSecond = getCostPerSecond();
+            const hourlyRate = costPerSecond * SECONDS_PER_HOUR;
+            
+            document.getElementById('perSecond').textContent = '$' + costPerSecond.toFixed(3);
+            document.getElementById('hourlyRate').textContent = '$' + Math.round(hourlyRate).toLocaleString();
+            document.getElementById('dailyRate').textContent = '$' + Math.round(hourlyRate * 8).toLocaleString();
+            document.getElementById('weeklyRate').textContent = '$' + Math.round(hourlyRate * 40).toLocaleString();
+
+            // Enable/disable start button
+            const startBtn = document.getElementById('startBtn');
+            startBtn.disabled = costPerSecond === 0;
+        }
+
+        function startMeeting() {
+            if (getCostPerSecond() === 0) return;
+            
+            isRunning = true;
+            isPaused = false;
+            startTime = Date.now() - pausedTime;
+            
+            document.getElementById('controls').classList.add('hidden');
+            document.getElementById('runningControls').classList.remove('hidden');
+            document.getElementById('costDisplay').classList.add('running');
+            document.getElementById('stats').classList.remove('hidden');
+            document.getElementById('shareSection').classList.add('hidden');
+            
+            intervalId = setInterval(updateCost, 50);
+        }
+
+        function pauseMeeting() {
+            if (!isRunning) return;
+            
+            isPaused = !isPaused;
+            
+            if (isPaused) {
+                pausedTime = Date.now() - startTime;
+                clearInterval(intervalId);
+                document.querySelector('#runningControls .btn-secondary').textContent = '▶ Resume';
+            } else {
+                startTime = Date.now() - pausedTime;
+                intervalId = setInterval(updateCost, 50);
+                document.querySelector('#runningControls .btn-secondary').textContent = '⏸ Pause';
+            }
+        }
+
+        function stopMeeting() {
+            isRunning = false;
+            isPaused = false;
+            clearInterval(intervalId);
+            
+            document.getElementById('controls').classList.remove('hidden');
+            document.getElementById('runningControls').classList.add('hidden');
+            document.getElementById('costDisplay').classList.remove('running');
+            document.getElementById('shareSection').classList.remove('hidden');
+            document.querySelector('#runningControls .btn-secondary').textContent = '⏸ Pause';
+        }
+
+        function resetAll() {
+            stopMeeting();
+            totalCost = 0;
+            pausedTime = 0;
+            startTime = null;
+            
+            document.getElementById('dollars').textContent = '0';
+            document.getElementById('cents').textContent = '00';
+            document.getElementById('timer').textContent = '00:00:00';
+            document.getElementById('shareSection').classList.add('hidden');
+            document.getElementById('stats').classList.add('hidden');
+        }
+
+        function updateCost() {
+            const elapsedMs = Date.now() - startTime;
+            const elapsedSeconds = elapsedMs / 1000;
+            
+            totalCost = elapsedSeconds * getCostPerSecond();
+            
+            // Update display
+            const dollars = Math.floor(totalCost);
+            const cents = Math.floor((totalCost - dollars) * 100);
+            
+            document.getElementById('dollars').textContent = dollars.toLocaleString();
+            document.getElementById('cents').textContent = cents.toString().padStart(2, '0');
+            
+            // Update timer
+            const hours = Math.floor(elapsedSeconds / 3600);
+            const minutes = Math.floor((elapsedSeconds % 3600) / 60);
+            const seconds = Math.floor(elapsedSeconds % 60);
+            
+            document.getElementById('timer').textContent = 
+                `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            
+            // Spawn money particles occasionally
+            if (Math.random() < 0.03 && totalCost > 0) {
+                spawnMoneyParticle();
+            }
+        }
+
+        function spawnMoneyParticle() {
+            const particles = document.getElementById('particles');
+            const particle = document.createElement('div');
+            particle.className = 'money-particle';
+            particle.textContent = ['💸', '💵', '💰', '🔥'][Math.floor(Math.random() * 4)];
+            particle.style.left = Math.random() * 100 + '%';
+            particle.style.animationDuration = (2 + Math.random() * 2) + 's';
+            particles.appendChild(particle);
+            
+            setTimeout(() => particle.remove(), 4000);
+        }
+
+        function shareResults() {
+            const elapsedMs = startTime ? (Date.now() - startTime) : pausedTime;
+            const minutes = Math.round(elapsedMs / 60000);
+            const attendeeCount = attendees.filter(a => a.salary).length;
+            
+            const text = `💸 This ${minutes} minute meeting cost $${totalCost.toFixed(2)} with ${attendeeCount} attendees.\n\nCalculate your meeting costs: ${window.location.href}`;
+            
+            if (navigator.share) {
+                navigator.share({
+                    title: 'Meeting Cost Calculator',
+                    text: text,
+                    url: window.location.href
+                });
+            } else {
+                navigator.clipboard.writeText(text).then(() => {
+                    alert('Results copied to clipboard!');
+                });
+            }
+        }
+
+        // Initialize
+        init();
+    </script>
+</body>
+</html>
